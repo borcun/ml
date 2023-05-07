@@ -20,97 +20,56 @@ years = range(2011, 2023)
 dataset = {}
 top_list = {}
 
-# 
-for year in years:
-  path = "./dataset/" + str(year) + "_rankings.csv"
-  dataset[year] = pd.read_csv(path)
-  # filter top elements to copy top list from entire dataset
-  top_list[year] = dataset[year].head(TOP_LIMIT)
+def executeModel(model, name):
+  annual_list = top_list[2011]
+  x = annual_list.drop(["location"], axis = 1)
+  y = annual_list["location"]
+  x_train, x_test, y_train, y_test = train_test_split(x, y, test_size = 0.2, random_state = 42)
 
-top_list[years[0]].info()
+  model.fit(x_train, y_train)
+  y_pred = model.predict(x_test)
+  score = accuracy_score(y_test, y_pred)
+  print(name, "model accuracy:", score)
 
-encoder = LabelEncoder()
-
-# convert object types to countable enumerations
-for year in years:
-  annual_list = top_list[year]
-  categoric = annual_list.select_dtypes(include=["object"]).copy()
+  conf_mat = confusion_matrix(y_test, y_pred)
+  sns.heatmap(conf_mat, annot=True, cbar=False, fmt="g")
+  plt.xlabel("y-pred")
+  plt.ylabel("y-test")
+  plt.title(name)
+  print(classification_report(y_test, y_pred))
   
-  for j in categoric.columns:
-    annual_list[j] = encoder.fit_transform(annual_list[j])
 
-for key, value in top_list.items():
-  ranks = value['rank'] 
-  names = value['name']
-  locations = value['location']
+def main():
+  warnings.filterwarnings("ignore")
+
+  encoder = LabelEncoder()
+ 
+  for year in years:
+    path = "./dataset/" + str(year) + "_rankings.csv"
+    dataset[year] = pd.read_csv(path)
+    # filter top elements to copy top list from entire dataset
+    top_list[year] = dataset[year].head(TOP_LIMIT)
+
+  top_list[years[0]].info()
+
+  # convert object types to countable enumerations
+  for year in years:
+    annual_list = top_list[year]
+    categoric = annual_list.select_dtypes(include=["object"]).copy()
   
-  print("==", key, "==")
-  
-  for i in range(0, TOP_LIMIT):
-    print(ranks[i], " ", names[i], " ", locations[i])
+    for j in categoric.columns:
+      annual_list[j] = encoder.fit_transform(annual_list[j])
 
-# show fit data as bar chart
-for year in years:
-  plt.figure(figsize=(20,3))
-  sns.countplot(x = top_list[year]["location"], data = top_list[year])
-  plt.show()
+  # show fit data as bar chart
+  for year in years:
+    plt.figure(figsize=(20,6))
+    sns.countplot(x = top_list[year]["location"], data = top_list[year])
+    plt.show()
 
-warnings.filterwarnings("ignore")
+  executeModel(LogisticRegression(), "Logistic Regression")
+  executeModel(SVC(), "SVM")
+  executeModel(KNeighborsClassifier(), "KNN")
+  executeModel(DecisionTreeClassifier(), "Decision Tree")
 
-annual_list = top_list[2011]
-x = annual_list.drop(["location"], axis = 1)
-y = annual_list["location"]
-
-x_train, x_test, y_train, y_test = train_test_split(x, y, test_size = 0.2, random_state = 42)
-
-model = LogisticRegression()
-model.fit(x_train, y_train)
-y_pred = model.predict(x_test)
-score = accuracy_score(y_test, y_pred)
-print("logistic regression model accuracy:", score)
-
-conf_mat = confusion_matrix(y_test, y_pred)
-sns.heatmap(conf_mat, annot=True, cbar=False, fmt="g")
-plt.xlabel("y-pred")
-plt.ylabel("y-test")
-plt.title("Logistic Regression")
-print(classification_report(y_test, y_pred))
-
-model = SVC()
-model.fit(x_train, y_train)
-y_pred = model.predict(x_test)
-score = accuracy_score(y_test, y_pred)
-print("SVM model accuracy:", score)
-
-conf_mat = confusion_matrix(y_test, y_pred)
-sns.heatmap(conf_mat, annot=True, cbar=False, fmt="g")
-plt.xlabel("y-pred")
-plt.ylabel("y-test")
-plt.title("SVM")
-print(classification_report(y_test, y_pred))
-
-model = KNeighborsClassifier()
-model.fit(x_train, y_train)
-y_pred = model.predict(x_test)
-score = accuracy_score(y_test, y_pred)
-print("KNN model accuracy:", score)
-
-conf_mat = confusion_matrix(y_test, y_pred)
-sns.heatmap(conf_mat, annot=True, cbar=False, fmt="g")
-plt.xlabel("y-pred")
-plt.ylabel("y-test")
-plt.title("KNN")
-print(classification_report(y_test, y_pred))
-
-model = DecisionTreeClassifier()
-model.fit(x_train, y_train)
-y_pred = model.predict(x_test)
-score = accuracy_score(y_test, y_pred)
-print("Decision Tree model accuracy:", score)
-
-conf_mat = confusion_matrix(y_test, y_pred)
-sns.heatmap(conf_mat, annot=True, cbar=False, fmt="g")
-plt.xlabel("y-pred")
-plt.ylabel("y-test")
-plt.title("Decision Tree")
-print(classification_report(y_test, y_pred))
+if __name__ == "__main__":
+  main()
